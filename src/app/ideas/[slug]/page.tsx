@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { getIdeaBySlug, getAllIdeas, SEASON_COLORS, SETTING_ICONS } from "@/lib/ideas";
+import { getIdeaBySlug, getAllIdeas } from "@/lib/ideas";
+import { SEASON_COLORS, SETTING_ICONS } from "@/lib/constants";
 import type { Metadata } from "next";
 
 type Props = {
