@@ -4,106 +4,238 @@ import { getIdeaBySlug, getAllIdeas } from "@/lib/ideas";
 import { SEASON_COLORS, SETTING_ICONS } from "@/lib/constants";
 import type { Metadata } from "next";
 
-type Props = {
-  params: Promise<{ slug: string }>;
-};
+type Props = { params: Promise<{ slug: string }> };
 
 export async function generateStaticParams() {
-  const ideas = getAllIdeas();
-  return ideas.map((idea) => ({ slug: idea.slug }));
+  return getAllIdeas().map((i) => ({ slug: i.slug }));
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const idea = await getIdeaBySlug(slug);
-  if (!idea) return { title: "Not Found" };
-  return { title: `${idea.title} | イベントアイデア帳` };
+  return idea ? { title: `${idea.title} | イベントアイデア帳` } : { title: "Not Found" };
 }
+
+const SEASON_TAG: Record<string, React.CSSProperties> = {
+  春: { background: "#FBF0F5", color: "#C45A84", border: "1px solid #F0C8DA" },
+  夏: { background: "#EEF5FB", color: "#2A6EA6", border: "1px solid #C8DDF0" },
+  秋: { background: "#FBF5EE", color: "#A65A2A", border: "1px solid #F0D8C8" },
+  冬: { background: "#EEF0FB", color: "#2A3A9A", border: "1px solid #C8CEF0" },
+  通年: { background: "#EEF8F0", color: "#2A8A4A", border: "1px solid #C8E8D0" },
+};
 
 export default async function IdeaPage({ params }: Props) {
   const { slug } = await params;
   const idea = await getIdeaBySlug(slug);
-
   if (!idea) notFound();
 
   return (
-    <div>
-      {/* 戻るリンク */}
-      <Link
-        href="/"
-        className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 mb-4"
-      >
-        ← 一覧に戻る
-      </Link>
+    <>
+      {/* ── Hero ──────────────────────────────────────── */}
+      <section className="hero-bg" style={{
+        padding: "4rem 2rem 3.5rem",
+        position: "relative", overflow: "hidden",
+      }}>
+        <div style={{
+          position: "absolute", left: "calc(50% - 600px + 48px)",
+          top: 0, bottom: 0, width: "1px",
+          background: "linear-gradient(180deg, transparent, rgba(184,150,90,0.4) 30%, rgba(184,150,90,0.4) 70%, transparent)",
+        }} />
+        <div style={{ maxWidth: "1200px", margin: "0 auto", position: "relative", zIndex: 1 }}>
+          {/* Breadcrumb */}
+          <Link href="/" style={{
+            fontSize: "0.6rem", letterSpacing: "0.25em",
+            textTransform: "uppercase",
+            color: "rgba(184,150,90,0.8)", textDecoration: "none",
+            display: "inline-flex", alignItems: "center", gap: "0.5rem",
+            marginBottom: "2rem",
+            transition: "opacity 0.3s",
+          }}>
+            ← Archive
+          </Link>
 
-      {/* タイトル */}
-      <h1 className="text-2xl font-bold mb-3">{idea.title}</h1>
+          {/* Season + Setting badges */}
+          <div className="animate-hero-sub" style={{
+            display: "flex", gap: "0.75rem", marginBottom: "1.25rem", flexWrap: "wrap",
+          }}>
+            <span style={{
+              fontSize: "0.65rem", letterSpacing: "0.15em",
+              padding: "0.3rem 0.8rem",
+              ...(SEASON_TAG[idea.season] ?? { background: "rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.8)", border: "1px solid rgba(255,255,255,0.2)" }),
+            }}>
+              {idea.season}
+            </span>
+            <span style={{
+              fontSize: "0.65rem", letterSpacing: "0.15em",
+              padding: "0.3rem 0.8rem",
+              background: "rgba(255,255,255,0.08)",
+              color: "rgba(255,255,255,0.6)",
+              border: "1px solid rgba(255,255,255,0.15)",
+            }}>
+              {SETTING_ICONS[idea.setting]} {idea.setting}
+            </span>
+          </div>
 
-      {/* メタ情報バッジ */}
-      <div className="flex flex-wrap gap-2 mb-6">
-        <span
-          className={`text-sm font-medium px-3 py-1 rounded-full ${SEASON_COLORS[idea.season] ?? "bg-gray-100 text-gray-600"}`}
-        >
-          {idea.season}
-        </span>
-        <span className="text-sm bg-gray-100 text-gray-700 px-3 py-1 rounded-full">
-          👥 {idea.participants}人
-        </span>
-        <span className="text-sm bg-gray-100 text-gray-700 px-3 py-1 rounded-full">
-          {SETTING_ICONS[idea.setting]} {idea.setting}
-        </span>
-        <span className="text-sm bg-gray-100 text-gray-700 px-3 py-1 rounded-full">
-          ⏱ {idea.duration}
-        </span>
-        <span className="text-sm bg-gray-100 text-gray-700 px-3 py-1 rounded-full">
-          💴 {idea.budgetPerPerson.toLocaleString()}円/人
-        </span>
-      </div>
+          {/* Title */}
+          <h1 className="animate-hero-title" style={{
+            fontFamily: "var(--font-noto), sans-serif",
+            fontSize: "clamp(1.75rem, 4vw, 3rem)",
+            fontWeight: 700, letterSpacing: "0.05em",
+            color: "var(--white)", lineHeight: 1.35,
+            maxWidth: "700px",
+          }}>
+            {idea.title}
+          </h1>
 
-      {/* 世代 */}
-      <div className="flex flex-wrap gap-1 mb-4">
-        <span className="text-sm text-gray-500 mr-1">対象：</span>
-        {idea.ageGroups.map((group) => (
-          <span
-            key={group}
-            className="text-sm bg-amber-50 text-amber-700 border border-amber-200 px-2 py-0.5 rounded-full"
-          >
-            {group}
-          </span>
-        ))}
-      </div>
+          {/* Meta row */}
+          <div className="animate-hero-desc" style={{
+            display: "flex", flexWrap: "wrap", gap: "1.5rem",
+            marginTop: "1.75rem",
+          }}>
+            {[
+              { icon: "👥", val: `${idea.participants}名` },
+              { icon: "⏱", val: idea.duration },
+              { icon: "💴", val: `¥${idea.budgetPerPerson.toLocaleString()}/人` },
+            ].map(({ icon, val }) => (
+              <span key={val} style={{
+                fontSize: "0.8rem", color: "rgba(255,255,255,0.6)",
+                display: "flex", alignItems: "center", gap: "0.4rem",
+              }}>
+                {icon} {val}
+              </span>
+            ))}
+          </div>
+        </div>
+      </section>
 
-      {/* タグ */}
-      <div className="flex flex-wrap gap-1 mb-6">
-        {idea.tags.map((tag) => (
-          <span
-            key={tag}
-            className="text-xs text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full"
-          >
-            #{tag}
-          </span>
-        ))}
-      </div>
+      {/* ── Content ───────────────────────────────────── */}
+      <section style={{ background: "var(--cream)", padding: "5rem 2rem" }}>
+        <div style={{
+          maxWidth: "1200px", margin: "0 auto",
+          display: "grid",
+          gridTemplateColumns: "1fr 280px",
+          gap: "4rem",
+          alignItems: "start",
+        }}>
 
-      <hr className="border-gray-200 mb-6" />
+          {/* Main content */}
+          <div data-reveal>
+            <article
+              className="prose-craft"
+              dangerouslySetInnerHTML={{ __html: idea.contentHtml }}
+            />
+          </div>
 
-      {/* Markdownコンテンツ */}
-      <article
-        className="prose prose-sm max-w-none
-          prose-headings:font-bold prose-headings:text-gray-800
-          prose-h2:text-xl prose-h2:mt-8 prose-h2:mb-3 prose-h2:border-b prose-h2:border-gray-200 prose-h2:pb-1
-          prose-h3:text-base prose-h3:mt-4 prose-h3:mb-2
-          prose-ul:my-2 prose-li:my-0.5
-          prose-p:my-2 prose-p:leading-relaxed
-          prose-strong:text-gray-900
-          prose-table:text-sm prose-th:bg-gray-50 prose-th:p-2 prose-td:p-2"
-        dangerouslySetInnerHTML={{ __html: idea.contentHtml }}
-      />
+          {/* Sidebar */}
+          <aside data-reveal data-delay="2">
+            {/* Info card */}
+            <div style={{
+              background: "var(--white)",
+              border: "1px solid var(--border)",
+              marginBottom: "1.5rem",
+              overflow: "hidden",
+            }}>
+              <div style={{
+                height: "3px",
+                background: "linear-gradient(90deg, var(--navy), var(--gold))",
+              }} />
+              <div style={{ padding: "1.5rem" }}>
+                <p style={{
+                  fontSize: "0.6rem", letterSpacing: "0.3em", textTransform: "uppercase",
+                  color: "var(--text-muted)", marginBottom: "1.25rem",
+                }}>
+                  Overview
+                </p>
 
-      {/* フッター */}
-      <div className="mt-8 pt-4 border-t border-gray-200 text-xs text-gray-400">
-        作成日: {new Date(idea.date).toLocaleDateString("ja-JP")}
-      </div>
-    </div>
+                {[
+                  { label: "季節", value: idea.season },
+                  { label: "参加人数", value: `${idea.participants}名` },
+                  { label: "場所", value: `${SETTING_ICONS[idea.setting]} ${idea.setting}` },
+                  { label: "所要時間", value: idea.duration },
+                  { label: "予算/人", value: `¥${idea.budgetPerPerson.toLocaleString()}` },
+                ].map(({ label, value }) => (
+                  <div key={label} style={{
+                    display: "flex", justifyContent: "space-between",
+                    alignItems: "baseline",
+                    padding: "0.6rem 0",
+                    borderBottom: "1px solid var(--cream-dark)",
+                    fontSize: "0.8rem",
+                  }}>
+                    <span style={{ color: "var(--text-muted)", fontSize: "0.7rem", letterSpacing: "0.1em" }}>{label}</span>
+                    <span style={{ color: "var(--navy)", fontWeight: 500 }}>{value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Age groups */}
+            <div style={{
+              background: "var(--white)",
+              border: "1px solid var(--border)",
+              padding: "1.5rem",
+              marginBottom: "1.5rem",
+            }}>
+              <p style={{
+                fontSize: "0.6rem", letterSpacing: "0.3em", textTransform: "uppercase",
+                color: "var(--text-muted)", marginBottom: "1rem",
+              }}>対象世代</p>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+                {idea.ageGroups.map((g) => (
+                  <span key={g} style={{
+                    fontSize: "0.7rem", letterSpacing: "0.1em",
+                    padding: "0.3rem 0.75rem",
+                    border: "1px solid var(--navy)",
+                    color: "var(--navy)",
+                  }}>
+                    {g}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            {/* Tags */}
+            <div style={{
+              background: "var(--white)",
+              border: "1px solid var(--border)",
+              padding: "1.5rem",
+              marginBottom: "2rem",
+            }}>
+              <p style={{
+                fontSize: "0.6rem", letterSpacing: "0.3em", textTransform: "uppercase",
+                color: "var(--text-muted)", marginBottom: "1rem",
+              }}>Tags</p>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem" }}>
+                {idea.tags.map((t) => (
+                  <span key={t} style={{
+                    fontSize: "0.65rem", color: "var(--gold)", letterSpacing: "0.05em",
+                  }}>
+                    #{t}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            {/* Date */}
+            <p style={{
+              fontSize: "0.6rem", letterSpacing: "0.2em",
+              color: "var(--text-muted)", textAlign: "right",
+            }}>
+              {new Date(idea.date).toLocaleDateString("ja-JP", { year: "numeric", month: "long", day: "numeric" })}
+            </p>
+          </aside>
+        </div>
+
+        {/* Back link */}
+        <div style={{ maxWidth: "1200px", margin: "4rem auto 0", borderTop: "1px solid var(--cream-dark)", paddingTop: "2rem" }}>
+          <Link href="/" style={{
+            fontSize: "0.65rem", letterSpacing: "0.25em", textTransform: "uppercase",
+            color: "var(--navy)", textDecoration: "none",
+            display: "inline-flex", alignItems: "center", gap: "0.5rem",
+          }}>
+            ← Back to Archive
+          </Link>
+        </div>
+      </section>
+    </>
   );
 }

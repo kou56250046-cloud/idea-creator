@@ -4,30 +4,35 @@ import { useState } from "react";
 import type { GeneratedIdea } from "@/app/api/generate/route";
 import IdeaCard from "./IdeaCard";
 
-const SCORE_COLOR = (score: number) => {
-  if (score >= 4) return "text-emerald-600";
-  if (score >= 3) return "text-amber-500";
-  return "text-red-500";
-};
+const SORT_OPTIONS = [
+  { key: "default",     label: "生成順",  en: "Default" },
+  { key: "feasibility", label: "実現性順", en: "Feasibility" },
+  { key: "novelty",     label: "新規性順", en: "Novelty" },
+] as const;
+
+const STEPS = [
+  { num: "01", label: "条件を入力",    en: "Input Conditions" },
+  { num: "02", label: "AIが10個生成",  en: "AI Generates 10 Ideas" },
+  { num: "03", label: "評価・選択",    en: "Evaluate & Select" },
+];
+
+const FIELDS = [
+  { key: "theme",          label: "テーマ",    en: "Theme",        placeholder: "スポーツ、料理、文化祭、アウトドア…" },
+  { key: "purpose",        label: "目的",      en: "Purpose",      placeholder: "親睦を深める、新メンバーの歓迎、季節の行事…" },
+  { key: "targetAudience", label: "対象者",    en: "Audience",     placeholder: "子供〜高齢者20人、大人のみ15人…" },
+  { key: "budget",         label: "予算",      en: "Budget",       placeholder: "500円/人、全体で1万円以内…" },
+] as const;
 
 export default function GenerateForm() {
-  const [form, setForm] = useState({
-    theme: "",
-    purpose: "",
-    targetAudience: "",
-    budget: "",
-  });
+  const [form, setForm] = useState({ theme: "", purpose: "", targetAudience: "", budget: "" });
   const [ideas, setIdeas] = useState<GeneratedIdea[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [sortBy, setSortBy] = useState<"default" | "feasibility" | "novelty">("default");
+  const [sort, setSort] = useState<"default" | "feasibility" | "novelty">("default");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setError("");
-    setIdeas([]);
-
+    setLoading(true); setError(""); setIdeas([]);
     try {
       const res = await fetch("/api/generate", {
         method: "POST",
@@ -44,160 +49,204 @@ export default function GenerateForm() {
     }
   };
 
-  // カテゴリ別にグループ化
-  const grouped = ideas.reduce<Record<string, GeneratedIdea[]>>((acc, idea) => {
-    const key = `${idea.categoryIcon} ${idea.category}`;
-    if (!acc[key]) acc[key] = [];
-    acc[key].push(idea);
-    return acc;
-  }, {});
-
-  const sortedIdeas = [...ideas].sort((a, b) => {
-    if (sortBy === "feasibility") return b.feasibility - a.feasibility;
-    if (sortBy === "novelty") return b.novelty - a.novelty;
+  const sorted = [...ideas].sort((a, b) => {
+    if (sort === "feasibility") return b.feasibility - a.feasibility;
+    if (sort === "novelty")     return b.novelty - a.novelty;
     return a.id - b.id;
   });
 
+  // Category grouping for summary
+  const catCount = ideas.reduce<Record<string, number>>((acc, i) => {
+    acc[i.category] = (acc[i.category] ?? 0) + 1;
+    return acc;
+  }, {});
+
   return (
     <div>
-      {/* 入力フォーム */}
-      <form
-        onSubmit={handleSubmit}
-        className="bg-white rounded-2xl border border-gray-200 p-5 mb-8 shadow-sm"
-      >
-        <h2 className="font-bold text-base mb-4 flex items-center gap-2">
-          <span>✨</span> 条件を入力してアイデアを生成
-        </h2>
-
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">
-              テーマ <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              placeholder="例：スポーツ大会、料理、文化祭…"
-              value={form.theme}
-              onChange={(e) => setForm({ ...form, theme: e.target.value })}
-              required
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">
-              目的 <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              placeholder="例：親睦を深める、新メンバーの歓迎…"
-              value={form.purpose}
-              onChange={(e) => setForm({ ...form, purpose: e.target.value })}
-              required
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">
-              対象者 <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              placeholder="例：子供〜高齢者20人、大人のみ15人…"
-              value={form.targetAudience}
-              onChange={(e) => setForm({ ...form, targetAudience: e.target.value })}
-              required
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">
-              予算 <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              placeholder="例：500円/人、全体で1万円以内…"
-              value={form.budget}
-              onChange={(e) => setForm({ ...form, budget: e.target.value })}
-              required
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
-            />
-          </div>
+      {/* ── FLOW Steps ─────────────────────────────────── */}
+      <section style={{ background: "var(--cream-dark)", padding: "3rem 2rem" }}>
+        <div style={{
+          maxWidth: "1200px", margin: "0 auto",
+          display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "2rem",
+        }}>
+          {STEPS.map((step, i) => (
+            <div key={step.num} style={{ textAlign: "center" }}>
+              <span style={{
+                fontFamily: "var(--font-cormorant), serif",
+                fontSize: "3.5rem", fontWeight: 300,
+                color: i === 0 ? "var(--navy)" : "var(--cream-dark)",
+                display: "block", lineHeight: 1,
+                WebkitTextStroke: i > 0 ? "1px var(--border)" : "none",
+              }}>
+                {step.num}
+              </span>
+              <div style={{
+                width: "24px", height: "1px",
+                background: i === 0 ? "var(--gold)" : "var(--border)",
+                margin: "0.75rem auto",
+              }} />
+              <p style={{
+                fontSize: "0.7rem", letterSpacing: "0.15em",
+                color: i === 0 ? "var(--navy)" : "var(--text-muted)",
+                textTransform: "uppercase",
+              }}>{step.en}</p>
+              <p style={{ fontSize: "0.85rem", color: "var(--text-sub)", marginTop: "0.25rem" }}>
+                {step.label}
+              </p>
+            </div>
+          ))}
         </div>
+      </section>
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="mt-4 w-full bg-indigo-600 text-white font-bold py-2.5 rounded-xl hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-        >
-          {loading ? "🤔 アイデアを考えています…" : "🎯 10個のアイデアを生成する"}
-        </button>
+      {/* ── Form Section ───────────────────────────────── */}
+      <section style={{ background: "var(--white)", padding: "5rem 2rem" }}>
+        <div style={{ maxWidth: "760px", margin: "0 auto" }}>
 
-        {error && (
-          <p className="mt-3 text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">
-            ⚠️ {error}
-          </p>
-        )}
-      </form>
+          {/* Section header */}
+          <div className="section-header" style={{ marginBottom: "3.5rem" }}>
+            <span className="section-label">条件入力</span>
+            <span className="section-title">INPUT</span>
+            <div className="section-rule visible" />
+          </div>
 
-      {/* ローディング */}
+          <form onSubmit={handleSubmit}>
+            <div style={{
+              display: "grid", gridTemplateColumns: "1fr 1fr",
+              gap: "0 3rem", marginBottom: "3.5rem",
+            }}>
+              {FIELDS.map(({ key, label, en, placeholder }) => (
+                <div key={key} className="field-wrap" style={{ marginBottom: "2.5rem" }}>
+                  <label className="field-label" htmlFor={key}>{en} / {label}</label>
+                  <input
+                    id={key}
+                    className="field-input"
+                    type="text"
+                    placeholder={placeholder}
+                    value={form[key as keyof typeof form]}
+                    onChange={(e) => setForm({ ...form, [key]: e.target.value })}
+                    required
+                  />
+                  <div className="field-underline" />
+                </div>
+              ))}
+            </div>
+
+            {/* Error */}
+            {error && (
+              <div style={{
+                padding: "1rem 1.5rem",
+                borderLeft: "2px solid #C05050",
+                background: "#FDF5F5",
+                marginBottom: "2rem",
+                fontSize: "0.8rem", color: "#C05050",
+              }}>
+                {error}
+              </div>
+            )}
+
+            {/* Submit */}
+            <div style={{ textAlign: "center" }}>
+              <button
+                type="submit"
+                disabled={loading}
+                className="btn-navy"
+                style={{
+                  padding: "1.1rem 4rem",
+                  opacity: loading ? 0.6 : 1,
+                  cursor: loading ? "not-allowed" : "pointer",
+                }}
+              >
+                {loading ? "Generating…" : "10個のアイデアを生成する"}
+              </button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      {/* ── Loading ─────────────────────────────────────── */}
       {loading && (
-        <div className="text-center py-16 text-gray-400">
-          <div className="text-4xl mb-3 animate-pulse">💡</div>
-          <p className="font-medium">SCAMPER法で多角的にアイデアを生成中…</p>
-          <p className="text-sm mt-1">重複排除・評価まで自動で行います</p>
-        </div>
+        <section style={{ background: "var(--cream)", padding: "5rem 2rem", textAlign: "center" }}>
+          <div style={{ display: "flex", justifyContent: "center", gap: "0.6rem", marginBottom: "2rem" }}>
+            <div className="dot-1" style={{ width: 10, height: 10, background: "var(--navy)", borderRadius: "50%" }} />
+            <div className="dot-2" style={{ width: 10, height: 10, background: "var(--gold)", borderRadius: "50%" }} />
+            <div className="dot-3" style={{ width: 10, height: 10, background: "var(--navy)", borderRadius: "50%" }} />
+          </div>
+          <p style={{
+            fontFamily: "var(--font-cormorant), serif",
+            fontSize: "1.5rem", fontWeight: 300,
+            letterSpacing: "0.2em", color: "var(--navy)",
+            marginBottom: "0.5rem",
+          }}>
+            Generating Ideas
+          </p>
+          <p style={{ fontSize: "0.75rem", letterSpacing: "0.15em", color: "var(--text-muted)", textTransform: "uppercase" }}>
+            SCAMPER法と心理学的原則を組み合わせ、10個のアイデアを生成中…
+          </p>
+        </section>
       )}
 
-      {/* 結果 */}
+      {/* ── Results ─────────────────────────────────────── */}
       {ideas.length > 0 && !loading && (
-        <div>
-          {/* 結果ヘッダー */}
-          <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-            <h2 className="font-bold text-base">
-              💡 {ideas.length}個のアイデアが生成されました
-            </h2>
+        <section style={{ background: "var(--cream)", padding: "5rem 2rem" }}>
+          <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
 
-            {/* 並び替え */}
-            <div className="flex items-center gap-2 text-sm">
-              <span className="text-gray-500">並び替え:</span>
-              {(["default", "feasibility", "novelty"] as const).map((key) => (
+            {/* Section header */}
+            <div className="section-header" style={{ marginBottom: "3rem" }}>
+              <span className="section-label">{ideas.length} ideas generated</span>
+              <span className="section-title">IDEAS</span>
+              <div className="section-rule visible" />
+            </div>
+
+            {/* Category summary */}
+            <div style={{
+              display: "flex", flexWrap: "wrap", gap: "0.75rem",
+              justifyContent: "center", marginBottom: "2rem",
+            }}>
+              {Object.entries(catCount).map(([cat, count]) => (
+                <span key={cat} style={{
+                  fontSize: "0.65rem", letterSpacing: "0.1em",
+                  padding: "0.35rem 0.85rem",
+                  border: "1px solid var(--border)",
+                  color: "var(--text-sub)",
+                  background: "var(--white)",
+                }}>
+                  {cat} × {count}
+                </span>
+              ))}
+            </div>
+
+            {/* Sort controls */}
+            <div style={{
+              display: "flex", justifyContent: "flex-end", gap: "0.5rem",
+              marginBottom: "2.5rem",
+            }}>
+              <span style={{ fontSize: "0.6rem", letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--text-muted)", alignSelf: "center", marginRight: "0.5rem" }}>
+                Sort
+              </span>
+              {SORT_OPTIONS.map(({ key, en }) => (
                 <button
                   key={key}
-                  onClick={() => setSortBy(key)}
-                  className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    sortBy === key
-                      ? "bg-indigo-600 text-white"
-                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                  }`}
+                  onClick={() => setSort(key)}
+                  className={`btn-outline-navy${sort === key ? " selected" : ""}`}
+                  style={{ fontSize: "0.6rem" }}
                 >
-                  {key === "default" ? "生成順" : key === "feasibility" ? "実現性" : "新規性"}
+                  {en}
                 </button>
               ))}
             </div>
-          </div>
 
-          {/* カテゴリ別サマリー */}
-          <div className="flex flex-wrap gap-2 mb-5">
-            {Object.entries(grouped).map(([cat, items]) => (
-              <span
-                key={cat}
-                className="text-xs bg-gray-100 text-gray-600 px-2.5 py-1 rounded-full"
-              >
-                {cat} {items.length}件
-              </span>
-            ))}
+            {/* Card grid */}
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))",
+              gap: "1.5rem",
+            }}>
+              {sorted.map((idea, i) => (
+                <IdeaCard key={idea.id} idea={idea} index={i} />
+              ))}
+            </div>
           </div>
-
-          {/* カード一覧 */}
-          <div className="grid gap-4 sm:grid-cols-2">
-            {sortedIdeas.map((idea) => (
-              <IdeaCard key={idea.id} idea={idea} scoreColor={SCORE_COLOR} />
-            ))}
-          </div>
-        </div>
+        </section>
       )}
     </div>
   );
