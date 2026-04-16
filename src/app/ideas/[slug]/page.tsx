@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getIdeaBySlug, getAllIdeas } from "@/lib/ideas";
-import { SEASON_COLORS, SETTING_ICONS } from "@/lib/constants";
+import { SETTING_ICONS } from "@/lib/constants";
 import type { Metadata } from "next";
 
 type Props = { params: Promise<{ slug: string }> };
@@ -16,12 +16,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return idea ? { title: `${idea.title} | イベントアイデア帳` } : { title: "Not Found" };
 }
 
-const SEASON_TAG: Record<string, React.CSSProperties> = {
-  春: { background: "#FBF0F5", color: "#C45A84", border: "1px solid #F0C8DA" },
-  夏: { background: "#EEF5FB", color: "#2A6EA6", border: "1px solid #C8DDF0" },
-  秋: { background: "#FBF5EE", color: "#A65A2A", border: "1px solid #F0D8C8" },
-  冬: { background: "#EEF0FB", color: "#2A3A9A", border: "1px solid #C8CEF0" },
-  通年: { background: "#EEF8F0", color: "#2A8A4A", border: "1px solid #C8E8D0" },
+const SEASON_BADGE: Record<string, { bg: string; color: string }> = {
+  春: { bg: "#FFF0F5", color: "#C45A84" },
+  夏: { bg: "#EEF5FB", color: "#2A6EA6" },
+  秋: { bg: "#FBF5EE", color: "#A65A2A" },
+  冬: { bg: "#EEF0FB", color: "#2A3A9A" },
+  通年: { bg: "#EEF8F0", color: "#2A8A4A" },
 };
 
 export default async function IdeaPage({ params }: Props) {
@@ -29,77 +29,68 @@ export default async function IdeaPage({ params }: Props) {
   const idea = await getIdeaBySlug(slug);
   if (!idea) notFound();
 
+  const badge = SEASON_BADGE[idea.season] ?? { bg: "var(--accent-soft)", color: "var(--accent)" };
+
   return (
     <>
-      {/* ── Hero ──────────────────────────────────────── */}
-      <section className="hero-bg" style={{
-        padding: "4rem 2rem 3.5rem",
-        position: "relative", overflow: "hidden",
+      {/* ── Page Header ──────────────────────────────── */}
+      <section style={{
+        background: "var(--white)",
+        borderBottom: "1px solid var(--border)",
+        padding: "3rem 1.5rem 2.5rem",
       }}>
-        <div style={{
-          position: "absolute", left: "calc(50% - 600px + 48px)",
-          top: 0, bottom: 0, width: "1px",
-          background: "linear-gradient(180deg, transparent, rgba(184,150,90,0.4) 30%, rgba(184,150,90,0.4) 70%, transparent)",
-        }} />
-        <div style={{ maxWidth: "1200px", margin: "0 auto", position: "relative", zIndex: 1 }}>
+        <div style={{ maxWidth: "1200px", margin: "0 auto", width: "100%" }}>
           {/* Breadcrumb */}
           <Link href="/" style={{
-            fontSize: "0.6rem", letterSpacing: "0.25em",
-            textTransform: "uppercase",
-            color: "rgba(184,150,90,0.8)", textDecoration: "none",
-            display: "inline-flex", alignItems: "center", gap: "0.5rem",
-            marginBottom: "2rem",
-            transition: "opacity 0.3s",
+            fontSize: "0.62rem", letterSpacing: "0.2em", textTransform: "uppercase",
+            color: "var(--text-muted)", textDecoration: "none",
+            display: "inline-flex", alignItems: "center", gap: "0.4rem",
+            marginBottom: "1.5rem", transition: "color 0.2s",
           }}>
             ← Archive
           </Link>
 
-          {/* Season + Setting badges */}
-          <div className="animate-hero-sub" style={{
-            display: "flex", gap: "0.75rem", marginBottom: "1.25rem", flexWrap: "wrap",
-          }}>
+          {/* Badges */}
+          <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1rem", flexWrap: "wrap" }}>
             <span style={{
-              fontSize: "0.65rem", letterSpacing: "0.15em",
-              padding: "0.3rem 0.8rem",
-              ...(SEASON_TAG[idea.season] ?? { background: "rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.8)", border: "1px solid rgba(255,255,255,0.2)" }),
+              fontSize: "0.65rem", letterSpacing: "0.1em",
+              padding: "0.3rem 0.8rem", borderRadius: "999px",
+              background: badge.bg, color: badge.color,
+              fontWeight: 600, border: `1px solid ${badge.color}30`,
             }}>
               {idea.season}
             </span>
             <span style={{
-              fontSize: "0.65rem", letterSpacing: "0.15em",
-              padding: "0.3rem 0.8rem",
-              background: "rgba(255,255,255,0.08)",
-              color: "rgba(255,255,255,0.6)",
-              border: "1px solid rgba(255,255,255,0.15)",
+              fontSize: "0.65rem", letterSpacing: "0.1em",
+              padding: "0.3rem 0.8rem", borderRadius: "999px",
+              background: "var(--bg)", color: "var(--text-sub)",
+              border: "1px solid var(--border)",
             }}>
               {SETTING_ICONS[idea.setting]} {idea.setting}
             </span>
           </div>
 
           {/* Title */}
-          <h1 className="animate-hero-title" style={{
+          <h1 style={{
             fontFamily: "var(--font-noto), sans-serif",
-            fontSize: "clamp(1.75rem, 4vw, 3rem)",
-            fontWeight: 700, letterSpacing: "0.05em",
-            color: "var(--white)", lineHeight: 1.35,
-            maxWidth: "700px",
+            fontSize: "clamp(1.5rem, 3.5vw, 2.5rem)",
+            fontWeight: 700, letterSpacing: "0.04em",
+            color: "var(--navy)", lineHeight: 1.4,
+            marginBottom: "1.25rem", maxWidth: "760px",
           }}>
             {idea.title}
           </h1>
 
           {/* Meta row */}
-          <div className="animate-hero-desc" style={{
-            display: "flex", flexWrap: "wrap", gap: "1.5rem",
-            marginTop: "1.75rem",
-          }}>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "1.25rem" }}>
             {[
               { icon: "👥", val: `${idea.participants}名` },
               { icon: "⏱", val: idea.duration },
               { icon: "💴", val: `¥${idea.budgetPerPerson.toLocaleString()}/人` },
             ].map(({ icon, val }) => (
               <span key={val} style={{
-                fontSize: "0.8rem", color: "rgba(255,255,255,0.6)",
-                display: "flex", alignItems: "center", gap: "0.4rem",
+                fontSize: "0.8rem", color: "var(--text-sub)",
+                display: "flex", alignItems: "center", gap: "0.35rem",
               }}>
                 {icon} {val}
               </span>
@@ -108,84 +99,52 @@ export default async function IdeaPage({ params }: Props) {
         </div>
       </section>
 
-      {/* ── Content ───────────────────────────────────── */}
-      <section style={{ background: "var(--cream)", padding: "5rem 2rem" }}>
-        <div style={{
-          maxWidth: "1200px", margin: "0 auto",
-          display: "grid",
-          gridTemplateColumns: "1fr 280px",
-          gap: "4rem",
-          alignItems: "start",
-        }}>
+      {/* ── Content ──────────────────────────────────── */}
+      <section style={{ background: "var(--bg)", padding: "3.5rem 1.5rem 5rem" }}>
+        <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
 
-          {/* Main content */}
-          <div data-reveal>
-            <article
-              className="prose-craft"
-              dangerouslySetInnerHTML={{ __html: idea.contentHtml }}
-            />
-          </div>
-
-          {/* Sidebar */}
-          <aside data-reveal data-delay="2">
-            {/* Info card */}
+          {/* Main article — full width */}
+          <div data-reveal style={{ marginBottom: "2rem" }}>
             <div style={{
               background: "var(--white)",
               border: "1px solid var(--border)",
-              marginBottom: "1.5rem",
-              overflow: "hidden",
+              borderRadius: "4px",
+              padding: "2.5rem",
+              boxShadow: "var(--shadow-sm)",
             }}>
-              <div style={{
-                height: "3px",
-                background: "linear-gradient(90deg, var(--navy), var(--gold))",
-              }} />
-              <div style={{ padding: "1.5rem" }}>
-                <p style={{
-                  fontSize: "0.6rem", letterSpacing: "0.3em", textTransform: "uppercase",
-                  color: "var(--text-muted)", marginBottom: "1.25rem",
-                }}>
-                  Overview
-                </p>
-
-                {[
-                  { label: "季節", value: idea.season },
-                  { label: "参加人数", value: `${idea.participants}名` },
-                  { label: "場所", value: `${SETTING_ICONS[idea.setting]} ${idea.setting}` },
-                  { label: "所要時間", value: idea.duration },
-                  { label: "予算/人", value: `¥${idea.budgetPerPerson.toLocaleString()}` },
-                ].map(({ label, value }) => (
-                  <div key={label} style={{
-                    display: "flex", justifyContent: "space-between",
-                    alignItems: "baseline",
-                    padding: "0.6rem 0",
-                    borderBottom: "1px solid var(--cream-dark)",
-                    fontSize: "0.8rem",
-                  }}>
-                    <span style={{ color: "var(--text-muted)", fontSize: "0.7rem", letterSpacing: "0.1em" }}>{label}</span>
-                    <span style={{ color: "var(--navy)", fontWeight: 500 }}>{value}</span>
-                  </div>
-                ))}
-              </div>
+              <article
+                className="prose-craft"
+                dangerouslySetInnerHTML={{ __html: idea.contentHtml }}
+              />
             </div>
+          </div>
 
+          {/* Sub info row: Age groups + Tags */}
+          <div data-reveal data-delay="1" style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
+            gap: "1rem",
+            marginBottom: "1rem",
+            alignItems: "start",
+          }}>
             {/* Age groups */}
             <div style={{
               background: "var(--white)",
               border: "1px solid var(--border)",
-              padding: "1.5rem",
-              marginBottom: "1.5rem",
+              borderRadius: "4px",
+              padding: "1.25rem",
+              boxShadow: "var(--shadow-sm)",
             }}>
               <p style={{
-                fontSize: "0.6rem", letterSpacing: "0.3em", textTransform: "uppercase",
-                color: "var(--text-muted)", marginBottom: "1rem",
+                fontSize: "0.62rem", letterSpacing: "0.2em", textTransform: "uppercase",
+                color: "var(--text-muted)", marginBottom: "0.85rem", fontWeight: 600,
               }}>対象世代</p>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem" }}>
                 {idea.ageGroups.map((g) => (
                   <span key={g} style={{
-                    fontSize: "0.7rem", letterSpacing: "0.1em",
-                    padding: "0.3rem 0.75rem",
-                    border: "1px solid var(--navy)",
-                    color: "var(--navy)",
+                    fontSize: "0.7rem", padding: "0.3rem 0.75rem",
+                    background: "var(--accent-soft)", color: "var(--accent)",
+                    borderRadius: "999px", fontWeight: 600,
                   }}>
                     {g}
                   </span>
@@ -197,40 +156,83 @@ export default async function IdeaPage({ params }: Props) {
             <div style={{
               background: "var(--white)",
               border: "1px solid var(--border)",
-              padding: "1.5rem",
-              marginBottom: "2rem",
+              borderRadius: "4px",
+              padding: "1.25rem",
+              boxShadow: "var(--shadow-sm)",
             }}>
               <p style={{
-                fontSize: "0.6rem", letterSpacing: "0.3em", textTransform: "uppercase",
-                color: "var(--text-muted)", marginBottom: "1rem",
+                fontSize: "0.62rem", letterSpacing: "0.2em", textTransform: "uppercase",
+                color: "var(--text-muted)", marginBottom: "0.85rem", fontWeight: 600,
               }}>Tags</p>
               <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem" }}>
                 {idea.tags.map((t) => (
-                  <span key={t} style={{
-                    fontSize: "0.65rem", color: "var(--gold)", letterSpacing: "0.05em",
-                  }}>
-                    #{t}
-                  </span>
+                  <span key={t} className="card-tag">#{t}</span>
                 ))}
               </div>
             </div>
+          </div>
 
-            {/* Date */}
-            <p style={{
-              fontSize: "0.6rem", letterSpacing: "0.2em",
-              color: "var(--text-muted)", textAlign: "right",
+          {/* Overview card — full width at bottom */}
+          <div data-reveal data-delay="2" style={{ marginBottom: "2rem" }}>
+            <div style={{
+              background: "var(--white)",
+              border: "1px solid var(--border)",
+              borderRadius: "4px",
+              overflow: "hidden",
+              boxShadow: "var(--shadow-sm)",
             }}>
-              {new Date(idea.date).toLocaleDateString("ja-JP", { year: "numeric", month: "long", day: "numeric" })}
-            </p>
-          </aside>
+              <div style={{ height: "3px", background: "var(--accent)" }} />
+              <div style={{ padding: "1.5rem 2rem" }}>
+                <p style={{
+                  fontSize: "0.62rem", letterSpacing: "0.2em", textTransform: "uppercase",
+                  color: "var(--text-muted)", marginBottom: "1.25rem", fontWeight: 600,
+                }}>
+                  Overview
+                </p>
+                <div style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))",
+                  gap: "0",
+                }}>
+                  {[
+                    { label: "季節",    value: idea.season },
+                    { label: "参加人数", value: `${idea.participants}名` },
+                    { label: "場所",    value: `${SETTING_ICONS[idea.setting]} ${idea.setting}` },
+                    { label: "所要時間", value: idea.duration },
+                    { label: "予算/人",  value: `¥${idea.budgetPerPerson.toLocaleString()}` },
+                  ].map(({ label, value }) => (
+                    <div key={label} style={{
+                      display: "flex", flexDirection: "column",
+                      padding: "0.75rem 1rem",
+                      borderRight: "1px solid var(--border)",
+                      borderBottom: "1px solid var(--border)",
+                    }}>
+                      <span style={{ color: "var(--text-muted)", fontSize: "0.68rem", letterSpacing: "0.08em", marginBottom: "0.3rem" }}>{label}</span>
+                      <span style={{ color: "var(--navy)", fontWeight: 700, fontSize: "0.9rem" }}>{value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Date */}
+          <p style={{
+            fontSize: "0.62rem", letterSpacing: "0.15em",
+            color: "var(--text-muted)", textAlign: "right",
+            marginBottom: "2rem",
+          }}>
+            {new Date(idea.date).toLocaleDateString("ja-JP", { year: "numeric", month: "long", day: "numeric" })}
+          </p>
         </div>
 
         {/* Back link */}
-        <div style={{ maxWidth: "1200px", margin: "4rem auto 0", borderTop: "1px solid var(--cream-dark)", paddingTop: "2rem" }}>
+        <div style={{ maxWidth: "1200px", margin: "0 auto", paddingTop: "2rem", borderTop: "1px solid var(--border)" }}>
           <Link href="/" style={{
-            fontSize: "0.65rem", letterSpacing: "0.25em", textTransform: "uppercase",
-            color: "var(--navy)", textDecoration: "none",
+            fontSize: "0.65rem", letterSpacing: "0.2em", textTransform: "uppercase",
+            color: "var(--accent)", textDecoration: "none",
             display: "inline-flex", alignItems: "center", gap: "0.5rem",
+            fontWeight: 600,
           }}>
             ← Back to Archive
           </Link>
