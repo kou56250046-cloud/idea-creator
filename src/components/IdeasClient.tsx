@@ -2,317 +2,283 @@
 
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
-import { Suspense } from "react";
+import { Suspense, useMemo } from "react";
 import type { IdeaSummary } from "@/lib/ideas";
-import { SEASON_COLORS, SETTING_ICONS } from "@/lib/constants";
+import { SETTING_ICONS } from "@/lib/constants";
 
-const SEASONS = ["全て", "春", "夏", "秋", "冬", "通年"] as const;
-
-const SEASON_EMOJI: Record<string, string> = {
-  全て: "◆", 春: "🌸", 夏: "🌊", 秋: "🍂", 冬: "❄", 通年: "◎",
+/** 設定（屋内/屋外）に応じたカードヘッダーカラー */
+const SETTING_HEADER: Record<string, { bg: string; accent: string; label: string }> = {
+  屋外:       { bg: "linear-gradient(135deg, #064e3b 0%, #065f46 100%)", accent: "#34d399", label: "OUTDOOR" },
+  屋内:       { bg: "linear-gradient(135deg, #312e81 0%, #3730a3 100%)", accent: "#818cf8", label: "INDOOR"  },
+  どちらでも: { bg: "linear-gradient(135deg, #78350f 0%, #92400e 100%)", accent: "#fbbf24", label: "BOTH"    },
 };
 
-const SEASON_EN: Record<string, string> = {
-  全て: "All", 春: "Spring", 夏: "Summer", 秋: "Autumn", 冬: "Winter", 通年: "Year-round",
-};
+/** タグの優先順位（カード上部に表示するメインテーマ） */
+const THEME_TAGS = [
+  "遊び", "野外活動", "室内活動", "運動", "自然体験",
+  "工作", "料理", "笑い", "アート", "クイズ", "音楽",
+  "謎解き", "チーム対抗", "チームワーク", "発表", "創造性", "探検", "冒険",
+];
 
-const SEASON_TAG_STYLE: Record<string, React.CSSProperties> = {
-  春: { background: "#FBF0F5", color: "#C45A84", border: "1px solid #F0C8DA" },
-  夏: { background: "#EEF5FB", color: "#2A6EA6", border: "1px solid #C8DDF0" },
-  秋: { background: "#FBF5EE", color: "#A65A2A", border: "1px solid #F0D8C8" },
-  冬: { background: "#EEF0FB", color: "#2A3A9A", border: "1px solid #C8CEF0" },
-  通年: { background: "#EEF8F0", color: "#2A8A4A", border: "1px solid #C8E8D0" },
-};
+function getMainTag(tags: string[]): string {
+  return THEME_TAGS.find((t) => tags.includes(t)) ?? tags[0] ?? "";
+}
 
-function IdeasContent({ initialIdeas }: { initialIdeas: IdeaSummary[] }) {
+function IdeaGrid({ initialIdeas }: { initialIdeas: IdeaSummary[] }) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
-  const currentSeason = searchParams.get("season") ?? "全て";
+  const currentTag = searchParams.get("tag") ?? "全て";
 
-  const filtered =
-    currentSeason !== "全て"
-      ? initialIdeas.filter((i) => i.season === currentSeason)
-      : initialIdeas;
+  /** アイデア全体から登場するユニークなタグを集計（件数順） */
+  const tagCounts = useMemo(() => {
+    const map = new Map<string, number>();
+    initialIdeas.forEach((idea) => {
+      idea.tags.forEach((t) => map.set(t, (map.get(t) ?? 0) + 1));
+    });
+    return Array.from(map.entries())
+      .sort((a, b) => b[1] - a[1])
+      .map(([tag, count]) => ({ tag, count }));
+  }, [initialIdeas]);
 
-  const handleSeason = (season: string) => {
-    season === "全て"
+  const filtered = useMemo(
+    () =>
+      currentTag !== "全て"
+        ? initialIdeas.filter((i) => i.tags.includes(currentTag))
+        : initialIdeas,
+    [initialIdeas, currentTag]
+  );
+
+  const handleTag = (t: string) =>
+    t === "全て"
       ? router.push(pathname)
-      : router.push(`${pathname}?season=${encodeURIComponent(season)}`);
-  };
+      : router.push(`${pathname}?tag=${encodeURIComponent(t)}`);
 
   return (
     <>
-      {/* ── Hero ──────────────────────────────────────── */}
-      <section className="hero-bg" style={{
-        minHeight: "480px", display: "flex", alignItems: "center",
-        padding: "5rem 2rem", position: "relative", overflow: "hidden",
+      {/* ─── Hero ──────────────────────────────────────── */}
+      <section style={{
+        background: "var(--navy)",
+        padding: "3.5rem 1.5rem 3rem",
+        position: "relative", overflow: "hidden",
       }}>
-        {/* Decorative vertical gold line */}
         <div style={{
-          position: "absolute", left: "calc(50% - 600px + 48px)",
-          top: 0, bottom: 0, width: "1px",
-          background: "linear-gradient(180deg, transparent, rgba(184,150,90,0.4) 30%, rgba(184,150,90,0.4) 70%, transparent)",
+          position: "absolute", inset: 0,
+          backgroundImage: "repeating-linear-gradient(135deg, transparent 0px, transparent 40px, rgba(255,255,255,0.02) 40px, rgba(255,255,255,0.02) 41px)",
         }} />
 
-        <div style={{ maxWidth: "1200px", margin: "0 auto", width: "100%", position: "relative", zIndex: 1 }}>
+        <div style={{ maxWidth: "1200px", margin: "0 auto", position: "relative", zIndex: 1 }}>
           <p className="animate-hero-label" style={{
-            fontFamily: "var(--font-cormorant), serif",
-            fontSize: "0.7rem", letterSpacing: "0.5em",
-            color: "rgba(184,150,90,0.9)", textTransform: "uppercase",
-            marginBottom: "1.5rem",
+            fontSize: "0.62rem", letterSpacing: "0.3em",
+            color: "rgba(184,150,90,0.85)", textTransform: "uppercase",
+            marginBottom: "1.25rem",
           }}>
             Community Event Planning
           </p>
 
           <div className="animate-hero-line" style={{
-            width: "60px", height: "1px",
-            background: "var(--gold)", marginBottom: "2rem",
+            width: "48px", height: "1.5px",
+            background: "rgba(184,150,90,0.6)", marginBottom: "1.5rem",
           }} />
 
           <h1 className="animate-hero-title" style={{
-            fontFamily: "var(--font-cormorant), serif",
-            fontSize: "clamp(3.5rem, 8vw, 7rem)",
-            fontWeight: 300, letterSpacing: "0.35em",
-            color: "var(--white)", lineHeight: 1.05,
-            marginBottom: "1.5rem",
+            fontFamily: "var(--font-noto), sans-serif",
+            fontSize: "clamp(1.9rem, 4.5vw, 3.2rem)",
+            fontWeight: 700, color: "var(--white)",
+            lineHeight: 1.3, letterSpacing: "0.04em",
+            marginBottom: "0.85rem",
           }}>
-            イベント<br />
-            <span style={{ fontStyle: "italic", color: "rgba(255,255,255,0.75)" }}>
-              アイデア帳
-            </span>
+            イベントアイデア帳
           </h1>
 
           <p className="animate-hero-sub" style={{
-            fontSize: "0.8rem", letterSpacing: "0.25em",
-            color: "rgba(255,255,255,0.5)", marginBottom: "2.5rem",
-            textTransform: "uppercase",
+            fontSize: "0.85rem", color: "rgba(255,255,255,0.6)",
+            letterSpacing: "0.05em", marginBottom: "2rem",
+            maxWidth: "480px",
           }}>
-            地域コミュニティの企画書ライブラリ
+            テーマ・人数・世代・予算から、コミュニティに最適なイベントを見つけよう
           </p>
 
-          <div className="animate-hero-cta" style={{ display: "flex", gap: "1.25rem", flexWrap: "wrap" }}>
-            <Link href="/generate" className="btn-navy" style={{ padding: "0.9rem 2.5rem" }}>
-              AI でアイデアを生成する
-            </Link>
-            <a href="#archive" className="btn-outline-gold">
-              アーカイブを見る
+          <div className="animate-hero-cta">
+            <a href="#archive" style={{
+              fontSize: "0.75rem", letterSpacing: "0.1em",
+              color: "rgba(255,255,255,0.75)",
+              border: "1px solid rgba(255,255,255,0.35)",
+              padding: "0.9rem 1.75rem",
+              borderRadius: "3px",
+              textDecoration: "none",
+              transition: "all 0.2s",
+              display: "inline-block",
+            }}>
+              アーカイブを見る ↓
             </a>
           </div>
         </div>
       </section>
 
-      {/* ── Archive Section ────────────────────────────── */}
-      <section id="archive" style={{
-        background: "var(--cream)", padding: "6rem 2rem",
-      }}>
+      {/* ─── Archive ───────────────────────────────────── */}
+      <section id="archive" style={{ padding: "4rem 1.5rem 5rem" }}>
         <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
 
-          {/* Section Header */}
-          <div data-reveal className="section-header" style={{ marginBottom: "3.5rem" }}>
+          {/* Section header */}
+          <div data-reveal className="section-header" style={{ marginBottom: "2.5rem" }}>
             <span className="section-label">アイデア一覧</span>
             <span className="section-title">ARCHIVE</span>
             <div className="section-rule" />
           </div>
 
-          {/* Season Filter */}
-          <div data-reveal data-delay="1" style={{
-            display: "flex", flexWrap: "wrap", gap: "0.5rem",
-            justifyContent: "center", marginBottom: "3rem",
-          }}>
-            {SEASONS.map((s) => (
+          {/* Tag filter */}
+          <div data-reveal data-delay="1" style={{ marginBottom: "2.5rem" }}>
+            {/* 「全て」ボタン */}
+            <div className="filter-pills" style={{ flexWrap: "wrap", gap: "0.5rem" }}>
               <button
-                key={s}
-                onClick={() => handleSeason(s)}
-                className={`season-pill${currentSeason === s ? " active" : ""}`}
+                onClick={() => handleTag("全て")}
+                className={`filter-pill${currentTag === "全て" ? " active" : ""}`}
               >
-                <span style={{ marginRight: "0.4rem", fontSize: "0.9em" }}>{SEASON_EMOJI[s]}</span>
-                {SEASON_EN[s]}
+                <span>✦</span>
+                <span>All</span>
+                <span style={{
+                  marginLeft: "0.25rem",
+                  fontSize: "0.6rem",
+                  opacity: 0.6,
+                }}>
+                  {initialIdeas.length}
+                </span>
               </button>
-            ))}
+              {tagCounts.map(({ tag, count }) => (
+                <button
+                  key={tag}
+                  onClick={() => handleTag(tag)}
+                  className={`filter-pill${currentTag === tag ? " active" : ""}`}
+                >
+                  <span>{tag}</span>
+                  <span style={{
+                    marginLeft: "0.25rem",
+                    fontSize: "0.6rem",
+                    opacity: 0.6,
+                  }}>
+                    {count}
+                  </span>
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Count */}
           <p data-reveal data-delay="2" style={{
-            textAlign: "center",
-            fontSize: "0.65rem", letterSpacing: "0.2em",
-            color: "var(--text-muted)", marginBottom: "3rem",
-            textTransform: "uppercase",
+            textAlign: "center", fontSize: "0.7rem",
+            color: "var(--text-muted)", marginBottom: "2.5rem",
+            letterSpacing: "0.12em",
           }}>
-            {filtered.length} Ideas Found
+            {filtered.length} 件のアイデア
+            {currentTag !== "全て" && (
+              <span style={{ marginLeft: "0.5rem", color: "var(--accent)" }}>
+                — {currentTag}
+              </span>
+            )}
           </p>
 
-          {/* Empty */}
+          {/* Empty state */}
           {filtered.length === 0 && (
-            <div data-reveal style={{ textAlign: "center", padding: "5rem 0" }}>
-              <p style={{
-                fontFamily: "var(--font-cormorant), serif",
-                fontSize: "3rem", color: "var(--cream-dark)",
-                fontWeight: 300, letterSpacing: "0.2em",
-              }}>No Ideas Yet</p>
-              <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", marginTop: "1rem" }}>
-                <Link href="/generate" style={{ color: "var(--gold)", textDecoration: "none" }}>
-                  AI でアイデアを生成する
-                </Link>
-                か、Claude Code に企画書を作成してもらいましょう
+            <div data-reveal style={{
+              textAlign: "center", padding: "5rem 0",
+              background: "var(--white)", borderRadius: "4px",
+              border: "1px dashed var(--border)",
+            }}>
+              <p style={{ fontSize: "2.5rem", marginBottom: "1rem" }}>📭</p>
+              <p style={{ color: "var(--text-sub)", fontSize: "0.9rem" }}>
+                このテーマのアイデアはまだありません
               </p>
+              <button
+                onClick={() => handleTag("全て")}
+                className="btn-primary"
+                style={{ marginTop: "1.5rem" }}
+              >
+                全て表示する
+              </button>
             </div>
           )}
 
-          {/* Card Grid */}
+          {/* Card grid */}
           <div style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))",
+            gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
             gap: "1.5rem",
           }}>
-            {filtered.map((idea, i) => (
-              <Link
-                key={idea.slug}
-                href={`/ideas/${idea.slug}`}
-                data-reveal
-                data-delay={String(Math.min((i % 3) + 1, 4))}
-                className="idea-card"
-                style={{
-                  display: "block", textDecoration: "none",
-                  position: "relative", overflow: "hidden",
-                }}
-              >
-                {/* Top accent bar */}
-                <div style={{
-                  height: "3px",
-                  background: `linear-gradient(90deg, var(--navy) 0%, var(--gold) 100%)`,
-                }} />
+            {filtered.map((idea, i) => {
+              const header = SETTING_HEADER[idea.setting] ?? SETTING_HEADER["どちらでも"];
+              const mainTag = getMainTag(idea.tags);
 
-                <div style={{ padding: "1.75rem" }}>
-                  {/* Season + Category header */}
+              return (
+                <Link
+                  key={idea.slug}
+                  href={`/ideas/${idea.slug}`}
+                  data-reveal
+                  data-delay={String((i % 3) + 1)}
+                  className="blog-card"
+                  style={{ textDecoration: "none", color: "inherit" }}
+                >
+                  {/* Color header */}
                   <div style={{
-                    display: "flex", justifyContent: "space-between",
-                    alignItems: "flex-start", marginBottom: "1rem",
+                    background: header.bg,
+                    padding: "1.1rem 1.25rem",
+                    display: "flex", alignItems: "center", justifyContent: "space-between",
+                    position: "relative", minHeight: "64px",
                   }}>
-                    <span style={{
-                      fontSize: "0.6rem", letterSpacing: "0.2em",
-                      textTransform: "uppercase", color: "var(--text-muted)",
-                    }}>
-                      {SETTING_ICONS[idea.setting]} {idea.setting}
-                    </span>
-                    <span style={{
-                      fontSize: "0.6rem", letterSpacing: "0.15em",
-                      padding: "0.25rem 0.6rem",
-                      ...SEASON_TAG_STYLE[idea.season] ?? { background: "var(--cream-dark)", color: "var(--text-sub)", border: "1px solid var(--border)" },
-                    }}>
-                      {idea.season}
-                    </span>
-                  </div>
-
-                  {/* Title */}
-                  <h2 style={{
-                    fontFamily: "var(--font-noto), sans-serif",
-                    fontSize: "1.05rem", fontWeight: 700,
-                    color: "var(--navy)", letterSpacing: "0.03em",
-                    lineHeight: 1.5, marginBottom: "1.25rem",
-                  }}>
-                    {idea.title}
-                  </h2>
-
-                  {/* Meta row */}
-                  <div style={{
-                    display: "flex", flexWrap: "wrap", gap: "1rem",
-                    marginBottom: "1.25rem",
-                    paddingBottom: "1.25rem",
-                    borderBottom: "1px solid var(--cream-dark)",
-                  }}>
-                    {[
-                      { icon: "👥", val: `${idea.participants}名` },
-                      { icon: "⏱", val: idea.duration },
-                      { icon: "💴", val: `¥${idea.budgetPerPerson.toLocaleString()}/人` },
-                    ].map(({ icon, val }) => (
-                      <span key={val} style={{
-                        fontSize: "0.75rem", color: "var(--text-sub)",
-                        display: "flex", alignItems: "center", gap: "0.3rem",
+                    {/* Setting badge */}
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                      <span style={{
+                        fontSize: "0.58rem", letterSpacing: "0.15em",
+                        color: header.accent, fontWeight: 700,
+                        textTransform: "uppercase",
                       }}>
-                        <span style={{ fontSize: "0.85em" }}>{icon}</span> {val}
+                        {SETTING_ICONS[idea.setting]} {header.label}
                       </span>
-                    ))}
-                  </div>
+                    </div>
 
-                  {/* Age groups */}
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", marginBottom: "1rem" }}>
-                    {idea.ageGroups.map((g) => (
-                      <span key={g} style={{
-                        fontSize: "0.6rem", letterSpacing: "0.1em",
-                        padding: "0.2rem 0.6rem",
-                        border: "1px solid var(--border)",
-                        color: "var(--text-sub)",
+                    {/* Main tag pill */}
+                    {mainTag && (
+                      <span style={{
+                        fontSize: "0.6rem", letterSpacing: "0.08em",
+                        padding: "0.2rem 0.6rem", borderRadius: "999px",
+                        background: "rgba(255,255,255,0.12)",
+                        color: "rgba(255,255,255,0.85)",
+                        fontWeight: 600,
                       }}>
-                        {g}
+                        {mainTag}
                       </span>
-                    ))}
+                    )}
                   </div>
 
-                  {/* Tags */}
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem" }}>
-                    {idea.tags.slice(0, 4).map((t) => (
-                      <span key={t} style={{
-                        fontSize: "0.6rem", color: "var(--gold)",
-                        letterSpacing: "0.05em",
-                      }}>
-                        #{t}
-                      </span>
-                    ))}
-                  </div>
-                </div>
+                  {/* Card body */}
+                  <div className="card-body">
+                    {/* Category (age groups) */}
+                    <p className="card-category">
+                      <span>◆</span>
+                      {idea.ageGroups.join(" · ")}
+                    </p>
 
-                {/* Read more indicator */}
-                <div style={{
-                  padding: "0.75rem 1.75rem",
-                  borderTop: "1px solid var(--cream-dark)",
-                  background: "var(--cream)",
-                  fontSize: "0.6rem", letterSpacing: "0.2em",
-                  textTransform: "uppercase",
-                  color: "var(--navy)",
-                  display: "flex", justifyContent: "space-between", alignItems: "center",
-                }}>
-                  <span>詳細を見る</span>
-                  <span style={{ fontFamily: "var(--font-cormorant), serif", fontSize: "1rem" }}>→</span>
-                </div>
-              </Link>
-            ))}
+                    {/* Title */}
+                    <h2 className="card-title">{idea.title}</h2>
+
+                    {/* Meta */}
+                    <div className="card-meta">
+                      <span>👥 {idea.participants}名</span>
+                      <span>⏱ {idea.duration}</span>
+                      <span>💴 ¥{idea.budgetPerPerson.toLocaleString()}/人</span>
+                    </div>
+
+                    {/* Tags */}
+                    <div className="card-tags">
+                      {idea.tags.slice(0, 4).map((t) => (
+                        <span key={t} className="card-tag">#{t}</span>
+                      ))}
+                    </div>
+                  </div>
+                </Link>
+              );
+            })}
           </div>
-        </div>
-      </section>
-
-      {/* ── CTA Band ───────────────────────────────────── */}
-      <section style={{
-        background: "var(--navy)", padding: "5rem 2rem", textAlign: "center",
-      }}>
-        <div data-reveal style={{ maxWidth: "600px", margin: "0 auto" }}>
-          <p style={{
-            fontFamily: "var(--font-cormorant), serif",
-            fontSize: "0.65rem", letterSpacing: "0.4em",
-            color: "var(--gold)", textTransform: "uppercase",
-            marginBottom: "1.5rem",
-          }}>
-            AI-Powered Generation
-          </p>
-          <h2 style={{
-            fontFamily: "var(--font-cormorant), serif",
-            fontSize: "clamp(1.8rem, 4vw, 2.8rem)",
-            fontWeight: 300, letterSpacing: "0.2em",
-            color: "var(--white)", lineHeight: 1.4,
-            marginBottom: "1rem",
-          }}>
-            まだアイデアが<br />見つかりませんか？
-          </h2>
-          <p style={{
-            fontSize: "0.8rem", color: "rgba(255,255,255,0.5)",
-            letterSpacing: "0.1em", marginBottom: "2.5rem",
-          }}>
-            テーマ・目的・対象者・予算を入力するだけで<br />
-            SCAMPER法を使ったAIが10個のアイデアを即時生成します
-          </p>
-          <Link href="/generate" className="btn-outline-gold">
-            AI でアイデアを生成する →
-          </Link>
         </div>
       </section>
     </>
@@ -322,15 +288,15 @@ function IdeasContent({ initialIdeas }: { initialIdeas: IdeaSummary[] }) {
 export default function IdeasClient({ initialIdeas }: { initialIdeas: IdeaSummary[] }) {
   return (
     <Suspense fallback={
-      <div style={{ textAlign: "center", padding: "8rem 0", color: "var(--text-muted)" }}>
+      <div style={{ textAlign: "center", padding: "6rem 0" }}>
         <div style={{ display: "flex", justifyContent: "center", gap: "0.5rem" }}>
-          <div className="dot-1" style={{ width: 8, height: 8, background: "var(--navy)", borderRadius: "50%" }} />
-          <div className="dot-2" style={{ width: 8, height: 8, background: "var(--navy)", borderRadius: "50%" }} />
-          <div className="dot-3" style={{ width: 8, height: 8, background: "var(--navy)", borderRadius: "50%" }} />
+          <div className="dot-1" style={{ width: 8, height: 8, background: "var(--accent)", borderRadius: "50%" }} />
+          <div className="dot-2" style={{ width: 8, height: 8, background: "var(--accent)", borderRadius: "50%" }} />
+          <div className="dot-3" style={{ width: 8, height: 8, background: "var(--accent)", borderRadius: "50%" }} />
         </div>
       </div>
     }>
-      <IdeasContent initialIdeas={initialIdeas} />
+      <IdeaGrid initialIdeas={initialIdeas} />
     </Suspense>
   );
 }
