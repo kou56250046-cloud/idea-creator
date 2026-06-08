@@ -2,15 +2,17 @@
 
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
-import { Suspense, useMemo } from "react";
+import { Suspense, useMemo, useState, useEffect } from "react";
 import type { IdeaSummary } from "@/lib/ideas";
 import { SETTING_ICONS } from "@/lib/constants";
 
-/** 設定（屋内/屋外）に応じたカードヘッダーカラー */
-const SETTING_HEADER: Record<string, { bg: string; accent: string; label: string }> = {
-  屋外:       { bg: "linear-gradient(135deg, #064e3b 0%, #065f46 100%)", accent: "#34d399", label: "OUTDOOR" },
-  屋内:       { bg: "linear-gradient(135deg, #312e81 0%, #3730a3 100%)", accent: "#818cf8", label: "INDOOR"  },
-  どちらでも: { bg: "linear-gradient(135deg, #78350f 0%, #92400e 100%)", accent: "#fbbf24", label: "BOTH"    },
+/** 季節に応じたカードヘッダーカラー */
+const SEASON_HEADER: Record<string, { bg: string; accent: string; emoji: string }> = {
+  春:   { bg: "linear-gradient(135deg, #FFF0F5 0%, #FFD6E7 100%)", accent: "#C45A84", emoji: "🌸" },
+  夏:   { bg: "linear-gradient(135deg, #EFF9FF 0%, #BAE4FF 100%)", accent: "#2A6EA6", emoji: "🌊" },
+  秋:   { bg: "linear-gradient(135deg, #FFFBEB 0%, #FEE08B 100%)", accent: "#A65A2A", emoji: "🍂" },
+  冬:   { bg: "linear-gradient(135deg, #EEF2FF 0%, #C7D2FE 100%)", accent: "#2A3A9A", emoji: "❄️"  },
+  通年: { bg: "linear-gradient(135deg, #F0FDF4 0%, #A7F3D0 100%)", accent: "#2A8A4A", emoji: "🌿" },
 };
 
 /** タグの優先順位（カード上部に表示するメインテーマ） */
@@ -29,6 +31,14 @@ function IdeaGrid({ initialIdeas }: { initialIdeas: IdeaSummary[] }) {
   const router = useRouter();
   const pathname = usePathname();
   const currentTag = searchParams.get("tag") ?? "全て";
+
+  const [doneIds, setDoneIds] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("done-ideas");
+      if (stored) setDoneIds(new Set(JSON.parse(stored) as string[]));
+    } catch {}
+  }, []);
 
   /** アイデア全体から登場するユニークなタグを集計（件数順） */
   const tagCounts = useMemo(() => {
@@ -206,8 +216,9 @@ function IdeaGrid({ initialIdeas }: { initialIdeas: IdeaSummary[] }) {
             gap: "1.5rem",
           }}>
             {filtered.map((idea, i) => {
-              const header = SETTING_HEADER[idea.setting] ?? SETTING_HEADER["どちらでも"];
+              const seasonHeader = SEASON_HEADER[idea.season] ?? SEASON_HEADER["通年"];
               const mainTag = getMainTag(idea.tags);
+              const isDone = doneIds.has(idea.slug);
 
               return (
                 <Link
@@ -218,9 +229,9 @@ function IdeaGrid({ initialIdeas }: { initialIdeas: IdeaSummary[] }) {
                   className="blog-card"
                   style={{ textDecoration: "none", color: "inherit" }}
                 >
-                  {/* Color header */}
+                  {/* Season color header */}
                   <div style={{
-                    background: header.bg,
+                    background: seasonHeader.bg,
                     padding: "1.1rem 1.25rem",
                     display: "flex", alignItems: "center", justifyContent: "space-between",
                     position: "relative", minHeight: "64px",
@@ -229,23 +240,39 @@ function IdeaGrid({ initialIdeas }: { initialIdeas: IdeaSummary[] }) {
                     <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                       <span style={{
                         fontSize: "0.58rem", letterSpacing: "0.15em",
-                        color: header.accent, fontWeight: 700,
+                        color: seasonHeader.accent, fontWeight: 700,
                         textTransform: "uppercase",
                       }}>
-                        {SETTING_ICONS[idea.setting]} {header.label}
+                        {SETTING_ICONS[idea.setting]} {idea.setting}
                       </span>
                     </div>
 
-                    {/* Main tag pill */}
-                    {mainTag && (
+                    {/* Season + main tag */}
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                      <span style={{ fontSize: "1.1rem", lineHeight: 1 }}>{seasonHeader.emoji}</span>
+                      {mainTag && (
+                        <span style={{
+                          fontSize: "0.6rem", letterSpacing: "0.08em",
+                          padding: "0.2rem 0.6rem", borderRadius: "999px",
+                          background: `${seasonHeader.accent}18`,
+                          color: seasonHeader.accent,
+                          fontWeight: 600, border: `1px solid ${seasonHeader.accent}30`,
+                        }}>
+                          {mainTag}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Done badge */}
+                    {isDone && (
                       <span style={{
-                        fontSize: "0.6rem", letterSpacing: "0.08em",
-                        padding: "0.2rem 0.6rem", borderRadius: "999px",
-                        background: "rgba(255,255,255,0.12)",
-                        color: "rgba(255,255,255,0.85)",
-                        fontWeight: 600,
+                        position: "absolute", top: "0.5rem", left: "0.5rem",
+                        background: "#22c55e", color: "white",
+                        fontSize: "0.55rem", padding: "0.15rem 0.5rem",
+                        borderRadius: "999px", fontWeight: 700,
+                        letterSpacing: "0.05em",
                       }}>
-                        {mainTag}
+                        ✅ 実施済
                       </span>
                     )}
                   </div>

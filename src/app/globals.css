@@ -467,6 +467,16 @@ body {
 }
 .expand-btn:hover { background: var(--accent); color: var(--white); }
 
+/* ─── Print ───────────────────────────────────────────────── */
+@media print {
+  .no-print { display: none !important; }
+  body { background: white; }
+  .site-header { display: none; }
+  [data-reveal] { opacity: 1 !important; transform: none !important; }
+  .blog-card { break-inside: avoid; box-shadow: none; border: 1px solid #ccc; }
+  section { padding: 1rem 0 !important; }
+}
+
 /* ─── Prose overrides ─────────────────────────────────────── */
 .prose-craft h2 {
   font-size: 1rem;

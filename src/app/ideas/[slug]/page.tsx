@@ -2,6 +2,8 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getIdeaBySlug, getAllIdeas } from "@/lib/ideas";
 import { SETTING_ICONS } from "@/lib/constants";
+import PrintButton from "@/components/PrintButton";
+import DoneButton from "@/components/DoneButton";
 import type { Metadata } from "next";
 
 type Props = { params: Promise<{ slug: string }> };
@@ -40,15 +42,21 @@ export default async function IdeaPage({ params }: Props) {
         padding: "3rem 1.5rem 2.5rem",
       }}>
         <div style={{ maxWidth: "1200px", margin: "0 auto", width: "100%" }}>
-          {/* Breadcrumb */}
-          <Link href="/" style={{
-            fontSize: "0.62rem", letterSpacing: "0.2em", textTransform: "uppercase",
-            color: "var(--text-muted)", textDecoration: "none",
-            display: "inline-flex", alignItems: "center", gap: "0.4rem",
-            marginBottom: "1.5rem", transition: "color 0.2s",
-          }}>
-            ← Archive
-          </Link>
+          {/* Breadcrumb + actions */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.5rem", flexWrap: "wrap", gap: "0.75rem" }}>
+            <Link href="/" style={{
+              fontSize: "0.62rem", letterSpacing: "0.2em", textTransform: "uppercase",
+              color: "var(--text-muted)", textDecoration: "none",
+              display: "inline-flex", alignItems: "center", gap: "0.4rem",
+              transition: "color 0.2s",
+            }}>
+              ← Archive
+            </Link>
+            <div className="no-print" style={{ display: "flex", gap: "0.5rem" }}>
+              <DoneButton slug={slug} />
+              <PrintButton />
+            </div>
+          </div>
 
           {/* Badges */}
           <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1rem", flexWrap: "wrap" }}>
